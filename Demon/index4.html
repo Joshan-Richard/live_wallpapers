@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Newton's Cradle - Final Integrated Design</title>
+  <style>
+    body {
+      margin: 0;
+      background: black;
+      overflow: hidden;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #graphical-clock {
+      position: relative;
+      width: 300px;
+      height: 300px;
+      margin-top: 20px;
+    }
+
+    #clock-svg-wireframe {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    #clock-face {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      background: radial-gradient(ellipse at center, #555555 0%, #111111 100%);
+      box-shadow: 0 0 15px rgba(0,0,0,0.7), inset 0 0 10px #000000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      z-index: 2;
+    }
+
+    #clock-container {
+      text-align: center;
+      text-shadow: 0 0 8px #ffffff;
+    }
+    #time { font-size: 2em; font-weight: bold; }
+    #date { font-size: 0.8em; }
+    
+    canvas {
+      display: block;
+      cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='10' stroke='white' stroke-width='2' fill='none'/%3E%3C/svg%3E"), auto;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 0;
+    }
+  </style>
+</head>
+<body>
+
+<div id="graphical-clock">
+  <svg id="clock-svg-wireframe" viewBox="-100 -100 200 200">
+    <defs>
+      <path id="petal" d="M 0,-45 L 22,-88 L 12,-95 L -12,-95 L -22,-88 Z" stroke="#bbbbbb" stroke-width="2" fill="none" />
+    </defs>
+    <g id="petals">
+      <use href="#petal" transform="rotate(0)" /> <use href="#petal" transform="rotate(30)" /> <use href="#petal" transform="rotate(60)" /> <use href="#petal" transform="rotate(90)" /> <use href="#petal" transform="rotate(120)" /> <use href="#petal" transform="rotate(150)" /> <use href="#petal" transform="rotate(180)" /> <use href="#petal" transform="rotate(210)" /> <use href="#petal" transform="rotate(240)" /> <use href="#petal" transform="rotate(270)" /> <use href="#petal" transform="rotate(300)" /> <use href="#petal" transform="rotate(330)" />
+    </g>
+  </svg>
+  <div id="clock-face">
+    <div id="clock-container">
+      <div id="time"></div>
+      <div id="date"></div>
+    </div>
+  </div>
+</div>
+
+<canvas id="cradle"></canvas>
+
+<script>
+  // --- Clock ---
+  const timeElement = document.getElementById('time');
+  const dateElement = document.getElementById('date');
+  function updateClock() {
+    const now = new Date();
+    timeElement.textContent = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+    dateElement.textContent = `${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][now.getDay()]}, ${now.getMonth() + 1}/${now.getDate()}`;
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  // --- Newton's Cradle ---
+  const canvas = document.getElementById('cradle');
+  const ctx = canvas.getContext('2d');
+  const clockElement = document.getElementById('graphical-clock');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  const N = 5;
+  const r = 25;
+  const g = 75.9;
+  const damping = 0.998;
+  const spacing = r * 2.05;
+  const L = 250; // Constant string length for correct physics
+  let balls = [];
+
+  const clockRect = clockElement.getBoundingClientRect();
+  const clockCenterX = clockRect.left + clockRect.width / 2;
+  const clockCenterY = clockRect.top + clockRect.height / 2;
+  
+  // Define the invisible horizontal line for the PENDULUM PHYSICS
+  const physicsAnchorY = clockCenterY + 100;
+
+  // Define the radius of the VISUAL clock wireframe for drawing
+  const wireframeRadius = (clockRect.width / 200) * 95;
+
+  class Ball {
+    constructor(i) {
+      this.i = i;
+      
+      // 1. Set the PHYSICAL anchor point on a straight line
+      this.x0 = clockCenterX + (i - (N - 1) / 2) * spacing;
+      this.y0 = physicsAnchorY;
+      
+      this.L = L; // Use the constant physics length
+
+      this.angle = 0; this.omega = 0; this.dragging = false;
+      this.glow = false; this.glowTime = 0;
+    }
+
+    update(dt) {
+      // Physics calculations are based on the simple, consistent model
+      if (!this.dragging) {
+        this.omega += (-g / this.L) * Math.sin(this.angle) * dt;
+        this.omega *= damping;
+        this.angle += this.omega * dt;
+      }
+      this.x = this.x0 + this.L * Math.sin(this.angle);
+      this.y = this.y0 + this.L * Math.cos(this.angle);
+
+      if (this.glowTime > 0) {
+        this.glowTime -= dt;
+        if (this.glowTime <= 0) this.glow = false;
+      }
+    }
+
+    draw() {
+      // --- VISUAL DECOUPLING LOGIC ---
+      // 1. Calculate the VISUAL anchor point on the clock's edge
+      const visualAnchorX = this.x0; // X is the same
+      const dx = visualAnchorX - clockCenterX;
+      // Use circle equation to find the Y on the wireframe arc
+      const visualAnchorY = clockCenterY + Math.sqrt(wireframeRadius * wireframeRadius - dx * dx);
+
+      // 2. Draw the string from the VISUAL anchor to the ball
+      ctx.beginPath();
+      ctx.strokeStyle = '#888888';
+      ctx.lineWidth = 1.5;
+      ctx.moveTo(visualAnchorX, visualAnchorY);
+      ctx.lineTo(this.x, this.y);
+      ctx.stroke();
+
+      // 3. Draw the ball and glow as normal
+      ctx.shadowBlur = this.glow ? 20 : 0;
+      ctx.shadowColor = 'white';
+
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+
+      if (this.glow) {
+        ctx.fillStyle = 'white';
+      } else {
+        const ballGrad = ctx.createRadialGradient(this.x - r * 0.4, this.y - r * 0.4, r*0.1, this.x, this.y, r);
+        ballGrad.addColorStop(0, '#ffffff');
+        ballGrad.addColorStop(0.5, '#cccccc');
+        ballGrad.addColorStop(1, '#444444');
+        ctx.fillStyle = ballGrad;
+      }
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    reset() { this.angle = 0; this.omega = 0; this.glow = false; }
+    triggerGlow() { this.glow = true; this.glowTime = 0.4; }
+    getVelocity() { return this.omega * this.L; }
+    setVelocity(v) { this.omega = v / this.L; }
+  }
+
+  for (let i = 0; i < N; i++) balls.push(new Ball(i));
+
+  let selected = null;
+  canvas.addEventListener('mousedown', e => {
+    for (let b of balls) {
+      const dx = e.clientX - b.x; const dy = e.clientY - b.y;
+      if (dx*dx + dy*dy < r*r) { selected = b; break; }
+    }
+  });
+
+  canvas.addEventListener('mousemove', e => {
+    if (selected) {
+      const dx = e.clientX - selected.x0;
+      const dy = e.clientY - selected.y0;
+      const angle = Math.atan2(dx, dy);
+      for (let i = 0; i < N; i++) {
+        if ((angle > 0.02 && i >= selected.i) || (angle < -0.02 && i <= selected.i)) {
+          balls[i].angle = angle; balls[i].omega = 0; balls[i].dragging = true;
+        }
+      }
+    }
+  });
+
+  canvas.addEventListener('mouseup', () => {
+    balls.forEach(b => b.dragging = false);
+    selected = null;
+  });
+
+  canvas.addEventListener('dblclick', () => balls.forEach(b => b.reset()));
+
+  function handleCollisions() {
+    for (let k = 0; k < N; k++) {
+      for (let i = 0; i < N - 1; i++) {
+        const b1 = balls[i];
+        const b2 = balls[i+1];
+        const dist = Math.sqrt(Math.pow(b2.x - b1.x, 2) + Math.pow(b2.y - b1.y, 2));
+        if (dist < r * 2) {
+          const v1 = b1.getVelocity();
+          const v2 = b2.getVelocity();
+          if ((b1.x < b2.x && v1 > v2) || (b1.x > b2.x && v1 < v2)) {
+            b1.setVelocity(v2);
+            b2.setVelocity(v1);
+            b1.triggerGlow();
+            b2.triggerGlow();
+          }
+        }
+      }
+    }
+  }
+
+  function animate() {
+    const dt = 0.016;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    balls.forEach(b => b.update(dt));
+    handleCollisions();
+    balls.forEach(b => b.draw());
+    requestAnimationFrame(animate);
+  }
+
+  animate();
+</script>
+</body>
+</html>

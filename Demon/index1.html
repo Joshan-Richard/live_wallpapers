@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    html, body {
+      margin: 0;
+      overflow: hidden;
+      height: 100%;
+      width: 100%;
+    }
+
+    #car {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: url("g_wagon_off.png") no-repeat center center;
+      background-size: cover;
+    }
+
+    #headlights {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: url("g_wagon_on.png") no-repeat center center;
+      background-size: cover;
+      opacity: 0;
+      transition: opacity 0.4s ease-in-out;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="car"></div>
+  <div id="headlights"></div>
+
+  <script>
+    const headlights = document.getElementById("headlights");
+
+    document.addEventListener("dblclick", () => {
+      headlights.style.opacity = headlights.style.opacity === "1" ? "0" : "1";
+    });
+  </script>
+</body>
+</html>

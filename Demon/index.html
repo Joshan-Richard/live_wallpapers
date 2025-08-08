@@ -1,48 +1,326 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <style>
-    html, body {
-      margin: 0;
-      overflow: hidden;
-      height: 100%;
-      width: 100%;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Interactive Wallpapers</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* General Body and Scrollbar Hiding */
+        body {
+            background-color: #000;
+            color: #fff;
+            font-family: 'Orbitron', sans-serif;
+            margin: 0;
+            /* Hide scrollbar for IE, Edge and Firefox */
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        /* Hide scrollbar for Chrome, Safari and Opera */
+        body::-webkit-scrollbar {
+            display: none;
+        }
 
-    #car {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: url("headlights_off.png") no-repeat center center;
-      background-size: cover;
-    }
+        /* Neon Scroll Progress Indicator */
+        #scroll-indicator {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background-color: #fff;
+            /* The "Neon" effect */
+            box-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #00aaff;
+            width: 0%; /* Initial width is 0, will be updated by JS */
+            z-index: 100;
+            transition: width 0.1s linear; /* Smooths the movement slightly */
+        }
 
-    #headlights {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: url("headlights_on.png") no-repeat center center;
-      background-size: cover;
-      opacity: 0;
-      transition: opacity 0.4s ease-in-out;
-      pointer-events: none;
-    }
-  </style>
+        /* Canvas for Live Galaxy Background */
+        #galaxy-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            padding: 2rem 0;
+            text-shadow: 0 0 10px #fff;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Card Layout for Vertical Scrolling */
+        .card-container {
+            display: flex;
+            flex-direction: column; /* Stack cards vertically */
+            align-items: center;   /* Center cards horizontally */
+            padding: 2rem 1rem;      /* Less horizontal padding */
+            gap: 4rem;             /* Space between vertical cards */
+        }
+
+        .card {
+            width: 80vw; /* Card takes up 80% of the viewport width */
+            max-width: 1100px; /* But not more than 1100px */
+            height: 70vh;
+            background: rgba(10, 10, 20, 0.5);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease;
+            display: flex;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+            animation: float 8s ease-in-out infinite;
+        }
+
+        .card:hover {
+            transform: translateY(-20px) scale(1.02);
+            box-shadow: 0 0 50px rgba(180, 210, 255, 0.3);
+            animation-play-state: paused;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px) rotateZ(-0.5deg); }
+            50% { transform: translateY(-15px) rotateZ(0.5deg); }
+            100% { transform: translateY(0px) rotateZ(-0.5deg); }
+        }
+
+        .card-iframe {
+            width: 75%;
+            height: 100%;
+            border: none;
+            border-radius: 15px 0 0 15px;
+        }
+
+        .card-description {
+            width: 25%;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            text-align: right;
+        }
+
+        .card-description h2 {
+            margin-bottom: 1rem;
+            text-shadow: 0 0 5px #fff;
+        }
+
+        /* Scroll to Top Button */
+        #scrollToTopBtn {
+            display: none;
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 99;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            outline: none;
+            background-color: rgba(10, 10, 20, 0.5);
+            color: white;
+            cursor: pointer;
+            padding: 15px;
+            border-radius: 50%;
+            font-size: 18px;
+            width: 50px;
+            height: 50px;
+            line-height: 18px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            transition: background-color 0.3s, transform 0.3s;
+        }
+
+        #scrollToTopBtn:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+
+    </style>
 </head>
 <body>
-  <div id="car"></div>
-  <div id="headlights"></div>
 
-  <script>
-    const headlights = document.getElementById("headlights");
+    <!-- The new scroll progress indicator bar -->
+    <div id="scroll-indicator"></div>
 
-    document.addEventListener("dblclick", () => {
-      headlights.style.opacity = headlights.style.opacity === "1" ? "0" : "1";
-    });
-  </script>
+    <canvas id="galaxy-canvas"></canvas>
+
+    <header>
+        <h1>Live Interactive Wallpapers</h1>
+    </header>
+
+    <main class="card-container">
+        <!-- Card 1 -->
+        <div class="card">
+            <iframe src="index0.html" class="card-iframe" title="Interactive Wallpaper 1"></iframe>
+            <div class="card-description">
+                <h2>G-Wagon Light Toggle</h2>
+                <p>A simple interactive wallpaper featuring a Mercedes G-Wagon. Click to toggle the headlights on and off.</p>
+            </div>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="card">
+            <iframe src="index1.html" class="card-iframe" title="Interactive Wallpaper 2"></iframe>
+            <div class="card-description">
+                <h2>Wallpaper 2</h2>
+                <p>Description of the second interactive wallpaper. Add your details here.</p>
+            </div>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="card">
+            <iframe src="index2.html" class="card-iframe" title="Interactive Wallpaper 3"></iframe>
+            <div class="card-description">
+                <h2>Wallpaper 3</h2>
+                <p>Description of the third interactive wallpaper. Add your details here.</p>
+            </div>
+        </div>
+
+        <!-- Card 4 -->
+        <div class="card">
+            <iframe src="index3.html" class="card-iframe" title="Interactive Wallpaper 4"></iframe>
+            <div class="card-description">
+                <h2>Wallpaper 4</h2>
+                <p>Description of the fourth interactive wallpaper. Add your details here.</p>
+            </div>
+        </div>
+
+        <!-- Card 5 -->
+        <div class="card">
+            <iframe src="index4.html" class="card-iframe" title="Interactive Wallpaper 5"></iframe>
+            <div class="card-description">
+                <h2>Wallpaper 5</h2>
+                <p>Description of the fifth interactive wallpaper. Add your details here.</p>
+            </div>
+        </div>
+
+        <!-- Card 6 -->
+        <div class="card">
+            <iframe src="index5.html" class="card-iframe" title="Interactive Wallpaper 6"></iframe>
+            <div class="card-description">
+                <h2>Wallpaper 6</h2>
+                <p>Description of the sixth interactive wallpaper. Add your details here.</p>
+            </div>
+        </div>
+    </main>
+
+    <button id="scrollToTopBtn" title="Go to top">↑</button>
+
+    <script>
+        // --- NEON SCROLL INDICATOR SCRIPT ---
+        const scrollIndicator = document.getElementById('scroll-indicator');
+        
+        function updateScrollIndicator() {
+            const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
+            
+            // This prevents division by zero if content is smaller than viewport
+            if (scrollHeight <= clientHeight) {
+                scrollIndicator.style.width = '0%';
+                return;
+            }
+
+            // The formula to calculate the percentage scrolled
+            const scrollPercent = (scrollTop / (scrollHeight - clientHeight)) * 100;
+            
+            scrollIndicator.style.width = scrollPercent + '%';
+        }
+
+        // Listen for scroll events to update the indicator
+        window.addEventListener('scroll', updateScrollIndicator);
+        // Also update on resize to ensure correctness
+        window.addEventListener('resize', updateScrollIndicator);
+
+        // --- SCROLL TO TOP BUTTON SCRIPT ---
+        const scrollToTopBtn = document.getElementById("scrollToTopBtn");
+        window.addEventListener('scroll', () => {
+            if (document.body.scrollTop > 100 || document.documentElement.scrollTop > 100) {
+                scrollToTopBtn.style.display = "block";
+            } else {
+                scrollToTopBtn.style.display = "none";
+            }
+        });
+        scrollToTopBtn.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // --- LIVE GALAXY BACKGROUND SCRIPT ---
+        const canvas = document.getElementById('galaxy-canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let stars = [];
+        let shootingStars = [];
+        let meteors = [];
+
+        const numStars = 300;
+        const shootingStarInterval = 5000;
+        const meteorInterval = 10000;
+
+        function Star(x, y, size, speed) {
+            this.x = x; this.y = y; this.size = size; this.speed = speed;
+        }
+        Star.prototype.draw = function() {
+            ctx.fillStyle = 'white'; ctx.globalAlpha = this.size / 2;
+            ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
+        };
+        Star.prototype.update = function() {
+            this.y += this.speed;
+            if (this.y > canvas.height) { this.y = 0; this.x = Math.random() * canvas.width; }
+        };
+
+        function ShootingStar() {
+            this.x = Math.random() * canvas.width * 0.5; this.y = Math.random() * canvas.height * 0.5;
+            this.len = Math.random() * 80 + 10; this.speed = Math.random() * 5 + 5;
+            this.size = Math.random() * 1 + 0.5; this.life = 100;
+        }
+        ShootingStar.prototype.draw = function() {
+            ctx.strokeStyle = `rgba(255, 255, 255, ${this.life / 100})`;
+            ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(this.x + this.len, this.y - this.len / 2);
+            ctx.lineWidth = this.size; ctx.stroke();
+        };
+        ShootingStar.prototype.update = function() { this.x += this.speed; this.y -= this.speed / 2; this.life--; };
+
+        function Meteor() {
+            this.x = canvas.width - Math.random() * (canvas.width * 0.5); this.y = -10;
+            this.len = Math.random() * 60 + 20; this.speed = Math.random() * 8 + 4;
+            this.size = Math.random() * 2 + 1; this.life = 150;
+        }
+        Meteor.prototype.draw = function() {
+            ctx.strokeStyle = `rgba(255, 87, 34, ${this.life / 150})`;
+            ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(this.x - this.len, this.y + this.len);
+            ctx.lineWidth = this.size; ctx.stroke();
+        };
+        Meteor.prototype.update = function() { this.x -= this.speed / 2; this.y += this.speed; this.life--; };
+
+        function init() {
+            for (let i = 0; i < numStars; i++) {
+                stars.push(new Star(Math.random() * canvas.width, Math.random() * canvas.height, Math.random() * 2, Math.random() * 0.5 + 0.1));
+            }
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            stars.forEach(star => { star.update(); star.draw(); });
+            shootingStars.forEach((ss, i) => { if (ss.life <= 0) shootingStars.splice(i, 1); ss.update(); ss.draw(); });
+            meteors.forEach((m, i) => { if (m.life <= 0) meteors.splice(i, 1); m.update(); m.draw(); });
+            requestAnimationFrame(animate);
+        }
+
+        setInterval(() => shootingStars.push(new ShootingStar()), shootingStarInterval);
+        setInterval(() => meteors.push(new Meteor()), meteorInterval);
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            stars = []; init();
+        });
+
+        init();
+        animate();
+    </script>
 </body>
 </html>
